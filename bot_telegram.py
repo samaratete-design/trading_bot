@@ -3,6 +3,7 @@ import logging
 from datetime import datetime
 import os
 import requests
+import yfinance as yf
 
 logging.basicConfig(
     level=logging.INFO,
@@ -26,21 +27,18 @@ def send_telegram_alert(message):
     except Exception as e:
         logger.error(f"Telegram Error: {e}")
 
-SYMBOL = "BTCUSDT"
+SYMBOL = "BTC-USD"
 INTERVAL = "1m"
 LIMIT = 50
-BINANCE_API_URL = "https://api.binance.com/api/v3/klines"
 
 def fetch_closes(symbol: str, interval: str, limit: int) -> list:
     try:
-        params = {"symbol": symbol, "interval": interval, "limit": limit}
-        response = requests.get(BINANCE_API_URL, params=params, timeout=10)
-        response.raise_for_status()
-        raw_data = response.json()
-        closes = [float(item[4]) for item in raw_data]
-        return closes
+        ticker = yf.Ticker(symbol)
+        data = ticker.history(period="1d", interval=interval)
+        closes = data["Close"].dropna().tolist()
+        return closes[-limit:]
     except Exception as e:
-        logger.error(f"Error fetching data from Binance: {e}")
+        logger.error(f"Error fetching data from Yahoo Finance: {e}")
         return []
 
 def calculate_sma(data, period):
