@@ -10,8 +10,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger("TelegramBot")
 
-TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
-TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
+TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
+TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
 def send_telegram_alert(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
@@ -33,13 +33,13 @@ LIMIT = 50
 RISK_PERCENT = 0.02
 SL_PERCENT = 0.01
 RR_RATIO = 2.0
-STARTING_BALANCE = 10000.0
+STARTING_BALANCE = 10.0
 
 def fetch_closes(symbol: str, interval: str, limit: int) -> list:
     try:
         ticker = yf.Ticker(symbol)
         data = ticker.history(period="1d", interval=interval)
-        closes = data["Close"].dropna().tolist()
+        closes = data['Close'].dropna().tolist()
         return closes[-limit:]
     except Exception as e:
         logger.error(f"Error fetching data from Yahoo Finance: {e}")
@@ -70,13 +70,15 @@ def open_position(direction, entry_price, balance):
         "tp": tp,
     }
 
+    dir_icon = "🟢" if direction == "BUY" else "🔴"
+    
     msg = (
-        f"{'BUY' if direction == 'BUY' else 'SELL'} SIGNAL - Position Opened\n"
+        f"{dir_icon} **{'شراء (BUY)' if direction == 'BUY' else 'بيع (SELL)'} SIGNAL - Open**\n"
         f"Symbol: {SYMBOL}\n"
-        f"Entry: {entry_price:.2f}\n"
-        f"Size: {size:.4f}\n"
-        f"SL: {sl:.2f}\n"
-        f"TP: {tp:.2f}\n"
+        f"Entry: `{entry_price:.2f}`\n"
+        f"Size: `{size:.4f}`\n"
+        f"SL: `{sl:.2f}`\n"
+        f"TP: `{tp:.2f}`\n"
         f"Risk: {risk_amount:.2f} USD ({RISK_PERCENT*100:.0f}%)"
     )
     logger.info(msg.replace("\n", " | "))
@@ -90,15 +92,16 @@ def close_position(position, exit_price, balance, reason):
         pnl = (position["entry_price"] - exit_price) * position["size"]
 
     new_balance = balance + pnl
+    dir_icon = "🟢" if position["direction"] == "BUY" else "🔴"
 
     msg = (
-        f"Position Closed ({reason})\n"
+        f"🏁 **Position Closed ({reason})** {dir_icon}\n"
         f"Symbol: {SYMBOL}\n"
         f"Direction: {position['direction']}\n"
-        f"Entry: {position['entry_price']:.2f}\n"
-        f"Exit: {exit_price:.2f}\n"
-        f"Realized P&L: {pnl:.2f} USD\n"
-        f"New Balance: {new_balance:.2f} USD"
+        f"Entry: `{position['entry_price']:.2f}`\n"
+        f"Exit: `{exit_price:.2f}`\n"
+        f"Realized P&L: `{pnl:.2f} USD`\n"
+        f"New Balance: `{new_balance:.2f} USD`"
     )
     logger.info(msg.replace("\n", " | "))
     send_telegram_alert(msg)
@@ -120,7 +123,7 @@ def check_sl_tp(position, current_price):
 def main():
     logger.info("Starting Telegram Signal Bot...")
     send_telegram_alert(
-        f"Bot Started Successfully! Monitoring {SYMBOL}\n"
+        f"🚀 **Bot Started Successfully (Test Mode 10$)!** Monitoring {SYMBOL}\n"
         f"Starting Balance: {STARTING_BALANCE:.2f} USD"
     )
 
@@ -161,8 +164,7 @@ def main():
 
                     if position is None:
                         position = open_position(new_signal, current_price, balance)
-
-                    last_signal = new_signal
+                        last_signal = new_signal
 
             time.sleep(30)
 
@@ -175,4 +177,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
