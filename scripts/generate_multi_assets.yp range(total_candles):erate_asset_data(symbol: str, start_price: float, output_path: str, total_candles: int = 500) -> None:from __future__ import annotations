@@ -1,0 +1,55 @@
+cle = i % 50
+        if cycle < 20:
+            # مرحلة هبوط/تذبذب
+            price -= (start_price * 0.0005) + ((i % 3) * (start_price * 0.0001))
+        elif cycle < 35:
+            # مرحلة صعود قوي (إشارات شراء)
+            price += start_price * 0.0012
+        else:
+            # مرحلة تصحيح وهبوط حاد (إشارات بيع)
+            price += start_price * 0.0002 if (i % 2 == 0) else -start_price * 0.0015
+
+        # ضمان عدم نزول السعر تحت الصفر نهائياً
+        price = max(price, start_price * 0.1)
+        rows.append((start + timedelta(hours=i), price))
+
+    os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+    with open(output_path, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["timestamp", "open", "high", "low", "close", "volume"])
+
+        prev_close = rows[0][1]
+        for ts, close in rows:
+            open_ = prev_close
+            spread = start_price * 0.0008
+            high = max(open_, close) + spread
+            low = min(open_, close) - spread
+            volume = 1500.0
+            
+            writer.writerow([
+                ts.isoformat(), 
+                round(open_, 4), 
+                round(high, 4), 
+                round(low, 4), 
+                round(close, 4),
+                round(volume, 2)
+            ])
+            prev_close = close
+
+    print(f"Successfully generated extended data for {symbol} at {output_path} ({total_candles} candles)")
+
+def main() -> int:
+    # 1. الذهب (XAUUSD)
+    generate_asset_data("XAUUSD", 2000.0, "data/XAUUSD_sample.csv", 500)
+    
+    # 2. اليورو دولار (EURUSD)
+    generate_asset_data("EURUSD", 1.0800, "data/EURUSD_sample.csv", 500)
+    
+    # 3. البيتكوين (BTCUSDT) - سنقوم بتحديث ملف العينة الرئيسي أيضاً ليصبح 500 شمعة
+    generate_asset_data("BTCUSDT", 50000.0, "data/historical_sample.csv", 500)
+    
+    return 0
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+
