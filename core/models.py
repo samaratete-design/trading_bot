@@ -68,7 +68,7 @@ class OrderResult:
     status: OrderStatus
 
 
-@dataclass(frozen=True)
+@dataclass
 class Position:
     """
     An open position being tracked by the broker after an order fills.

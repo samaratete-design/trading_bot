@@ -1,0 +1,8 @@
+symbol=BTCUSDT (Binance spot, proxy for BTC-USD)
+interval=15m
+days=60
+source=binance_api
+fetched_at_utc=2026-09-08T00:25:10.286894+00:00
+rows=5760
+first_timestamp=2026-07-10T00:30:00+00:00
+last_timestamp=2026-09-08T00:15:00+00:00

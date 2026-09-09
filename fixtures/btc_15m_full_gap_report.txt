@@ -1,0 +1,7 @@
+Gap/integrity report for BTCUSDT 15m
+Total candles: 26300
+Duplicates found: 0
+Gaps found: 0
+======================================================================
+
+No gaps or duplicates found. Series is fully contiguous.
