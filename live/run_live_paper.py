@@ -23,12 +23,14 @@ Usage:
 Optional env vars:
     LIVE_DB_PATH     default: live_btc_trend_v1.sqlite
     POLL_SECONDS     default: 60
+    LIVE_DATA_FEED   default: binance  (also accepts: yahoo)
 """
 from __future__ import annotations
 
 import os
 import sys
 import time
+from datetime import datetime
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -36,6 +38,7 @@ from execution.state_machine import RuntimeState
 from live.binance_feed import fetch_recent_closed_candles
 from live.telegram_event_adapter import TelegramEventAdapter
 from live.telegram_notifier import TelegramNotifier
+from live.yahoo_feed import YahooFeed
 from persistence.sqlite_store import PersistentPaperBroker
 
 DB_PATH = os.environ.get("LIVE_DB_PATH", "live_btc_trend_v1.sqlite")
@@ -43,6 +46,67 @@ POLL_SECONDS = int(os.environ.get("POLL_SECONDS", "60"))
 STARTING_BALANCE = 100.0
 SYMBOL = "BTC-USD"
 WARMUP_CANDLES = 250  # strategy.MIN_WARMUP is 200; fetch a margin above it
+
+
+class BinanceFeedAdapter:
+    """Thin wrapper around the EXISTING live/binance_feed.py module-level
+    function so it exposes the same shape as YahooFeed (.symbol,
+    .interval, .fetch_closed_candles(limit)) for get_data_feed() to
+    return uniformly. live/binance_feed.py itself is untouched -- this
+    is the default feed and remains exactly as-is (LIVE_DATA_FEED=binance
+    or unset)."""
+
+    symbol = "BTCUSDT"
+    interval = "15m"
+
+    def fetch_closed_candles(self, limit: int = 250):
+        return fetch_recent_closed_candles(limit=limit)
+
+
+def get_data_feed():
+    """Selects the live candle feed via LIVE_DATA_FEED (default: binance).
+
+    This is the SAME feed instance used for warmup, polling, and
+    restart/resume in main() below -- not a separate code path.
+    """
+    feed_name = os.environ.get("LIVE_DATA_FEED", "binance").strip().lower()
+    if feed_name == "binance":
+        return BinanceFeedAdapter()
+    if feed_name == "yahoo":
+        return YahooFeed(symbol="BTC-USD", interval="15m")
+    raise ValueError(
+        f"Unknown LIVE_DATA_FEED={feed_name!r} (expected 'binance' or 'yahoo')"
+    )
+
+
+def _coerce_last_ts(feed, last_ts):
+    """persistence/sqlite_store.py always persists candle.timestamp as
+    TEXT (str(candle.timestamp)) and always reads it back as a plain str
+    on restore (see PersistentPaperBroker.restore /
+    PersistentPaperBroker.get_last_candle) -- that part of the persistence
+    layer is unchanged here, per instruction not to rewrite existing
+    architecture.
+
+    On the warmup (non-restart) path, last_ts is already whatever type
+    this feed's own Candle.timestamp uses (str for Binance, datetime for
+    Yahoo) -- nothing to coerce there; str.fromisoformat would be a no-op
+    on that path anyway since it's not called with restart-read TEXT.
+
+    On the restart path, last_ts is always plain TEXT regardless of feed.
+    live/binance_feed.py's candle.timestamp is itself already a string, so
+    `str > str` continues to work exactly as before for
+    LIVE_DATA_FEED=binance -- no behavior change.
+
+    live/yahoo_feed.py's candle.timestamp is a real datetime (per the
+    core.models.Candle contract), so after a restart the persisted TEXT
+    value has to be parsed back into a datetime before it can be compared
+    against newly-fetched Yahoo candles in the poll loop below; otherwise
+    `datetime > str` raises TypeError the first time the process resumes.
+    This function does only that reconciliation, scoped to this file.
+    """
+    if isinstance(feed, YahooFeed) and isinstance(last_ts, str):
+        return datetime.fromisoformat(last_ts)
+    return last_ts
 
 
 def fmt(p: float) -> str:
@@ -59,6 +123,8 @@ def _process_one_candle(pb: PersistentPaperBroker, notifier: TelegramNotifier, c
 
 def main() -> None:
     notifier = TelegramNotifier()
+    feed = get_data_feed()
+    print(f"[feed] using {type(feed).__name__} ({feed.symbol}, {feed.interval})")
 
     if os.path.exists(DB_PATH):
         pb = PersistentPaperBroker.restore(DB_PATH)
@@ -73,7 +139,7 @@ def main() -> None:
     else:
         pb = PersistentPaperBroker(DB_PATH, starting_balance=STARTING_BALANCE, symbol=SYMBOL)
         print(f"[warmup] fetching {WARMUP_CANDLES} closed candles for strategy indicator warmup...")
-        warmup_candles = fetch_recent_closed_candles(limit=WARMUP_CANDLES)
+        warmup_candles = feed.fetch_closed_candles(limit=WARMUP_CANDLES)
         for idx, c in enumerate(warmup_candles):
             pb.process_closed_candle(c, idx)
         next_idx = len(warmup_candles)
@@ -85,10 +151,16 @@ def main() -> None:
             f"warmup complete through {last_ts}, watching for live signals now."
         )
 
+    # last_ts is only ever plain TEXT the moment it came from
+    # pb.get_last_candle() (restart path) -- reconcile it to this feed's
+    # actual candle.timestamp type (see _coerce_last_ts docstring) before
+    # the poll loop below compares them with `>`.
+    last_ts = _coerce_last_ts(feed, last_ts)
+
     print(f"[live] entering poll loop, every {POLL_SECONDS}s, next_idx={next_idx}, last_ts={last_ts}")
     while True:
         try:
-            recent = fetch_recent_closed_candles(limit=10)
+            recent = feed.fetch_closed_candles(limit=10)
         except Exception as e:
             print(f"[feed error] {e}")
             time.sleep(POLL_SECONDS)
