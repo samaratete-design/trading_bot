@@ -46,7 +46,7 @@ class Signal:
     order_type: OrderType
     entry_price: float
     stop_loss: float
-    take_profit: float
+    take_profit: float | None
     strategy_name: str
 
 

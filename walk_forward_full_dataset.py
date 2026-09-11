@@ -160,7 +160,7 @@ def run_baseline(candles):
                 next_candle = candles[idx + 1]
                 raw_entry_price = next_candle.open
                 entry_price = raw_entry_price * (1 + SLIPPAGE_RATE)
-                stop_distance = entry_price - signal.initial_stop
+                stop_distance = entry_price - signal.stop_loss
                 if stop_distance <= 0:
                     continue
 
@@ -171,13 +171,13 @@ def run_baseline(candles):
 
                 position = PositionState(
                     entry_price=entry_price,
-                    structure_stop=signal.initial_stop,
+                    structure_stop=signal.stop_loss,
                     highest_high_since_entry=next_candle.high,
                 )
                 open_meta = {
                     "entry_time": next_candle.timestamp,
                     "entry_price": entry_price,
-                    "initial_stop": signal.initial_stop,
+                    "initial_stop": signal.stop_loss,
                     "quantity": quantity,
                     "risk_amount": risk_amount,
                     "entry_fee": entry_fee,

@@ -1,0 +1,58 @@
+[1mdiff --git a/strategies/btc_trend_v1.py b/strategies/btc_trend_v1.py[m
+[1mindex 2a3f965..0debadb 100644[m
+[1m--- a/strategies/btc_trend_v1.py[m
+[1m+++ b/strategies/btc_trend_v1.py[m
+[36m@@ -51,22 +51,7 @@[m [mfrom enum import Enum[m
+ from typing import Optional, List, Deque[m
+ from collections import deque[m
+ [m
+[31m-[m
+[31m-# ---------------------------------------------------------------------------[m
+[31m-# Minimal local data contracts.[m
+[31m-# Replace/adapt these to match your actual core/models.py Candle and Signal[m
+[31m-# dataclasses if they differ in shape. Kept intentionally simple and[m
+[31m-# explicit so the mapping is obvious.[m
+[31m-# ---------------------------------------------------------------------------[m
+[31m-[m
+[31m-@dataclass(frozen=True)[m
+[31m-class Candle:[m
+[31m-    timestamp: object  # keep as whatever your real Candle uses (datetime, int, etc.)[m
+[31m-    open: float[m
+[31m-    high: float[m
+[31m-    low: float[m
+[31m-    close: float[m
+[31m-    volume: float = 0.0[m
+[32m+[m[32mfrom core.models import Candle, Signal, OrderType[m
+ [m
+ [m
+ class ExitReason(Enum):[m
+[36m@@ -76,15 +61,6 @@[m [mclass ExitReason(Enum):[m
+     TREND_BREAK = "trend_break"[m
+ [m
+ [m
+[31m-@dataclass(frozen=True)[m
+[31m-class Signal:[m
+[31m-    symbol: str[m
+[31m-    direction: str  # "BUY" only in v1[m
+[31m-    entry_price: float[m
+[31m-    initial_stop: float[m
+[31m-    strategy: str = "btc_trend_v1"[m
+[31m-[m
+[31m-[m
+ @dataclass(frozen=True)[m
+ class ExitInstruction:[m
+     exit_price: float[m
+[36m@@ -384,8 +360,11 @@[m [mclass BTCTrendV1Strategy:[m
+         # here (set to signal_candle.close) that the caller MUST overwrite[m
+         # with the actual next-candle open before using it for sizing/fill.[m
+         return Signal([m
+[32m+[m[32m            timestamp=signal_candle.timestamp,[m
+             symbol=self.SYMBOL,[m
+[31m-            direction="BUY",[m
+[32m+[m[32m            order_type=OrderType.BUY,[m
+             entry_price=signal_candle.close,  # placeholder — see docstring[m
+[31m-            initial_stop=structure_stop,[m
+[32m+[m[32m            stop_loss=structure_stop,[m
+[32m+[m[32m            take_profit=None,[m
+[32m+[m[32m            strategy_name="btc_trend_v1",[m
+         )[m

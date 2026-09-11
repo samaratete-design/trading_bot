@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from dataclasses import replace
 
 from strategies.btc_trend_v1 import (
     BTCTrendV1Strategy,
@@ -104,18 +105,13 @@ for i, current_candle in enumerate(candles):
 
         # The strategy signal carries the structure stop generated
         # from the signal candle. The actual entry is the NEXT candle open.
-        structure_stop = float(signal.initial_stop)
+        structure_stop = float(signal.stop_loss)
 
-        # Build a temporary object compatible with RiskManager.
-        class RiskSignal:
-            pass
-
-        risk_signal = RiskSignal()
-        risk_signal.symbol = signal.symbol
-        risk_signal.order_type = OrderType.BUY
-        risk_signal.entry_price = execution_price
-        risk_signal.stop_loss = structure_stop
-        risk_signal.take_profit = None
+        # Execution signal: same canonical Signal contract, with entry_price
+        # overwritten to the next-candle open. The strategy's entry_price is
+        # only a reference placeholder (see strategies/btc_trend_v1.py) —
+        # stop_loss (the original structure stop) is preserved unchanged.
+        risk_signal = replace(signal, entry_price=execution_price)
 
         size = risk_manager.calculate_position_size(
             balance,

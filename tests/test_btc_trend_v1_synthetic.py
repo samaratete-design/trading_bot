@@ -173,7 +173,7 @@ def main():
                     fill_price = next_candle.open
                     position = PositionState(
                         entry_price=fill_price,
-                        structure_stop=signal.initial_stop,
+                        structure_stop=signal.stop_loss,
                         highest_high_since_entry=next_candle.high,
                     )
                     entries.append(
@@ -182,7 +182,7 @@ def main():
                             "timestamp": candle.timestamp,
                             "signal_candle_close": candle.close,
                             "fill_price": fill_price,
-                            "initial_stop": signal.initial_stop,
+                            "initial_stop": signal.stop_loss,
                         }
                     )
 
