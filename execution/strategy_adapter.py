@@ -43,11 +43,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-from strategies.btc_trend_v1 import (
-    BTCTrendV1Strategy,
-    Candle as StrategyCandle,
-    PositionState,
-)
+from core.models import Candle
+from strategies.btc_trend_v1 import BTCTrendV1Strategy, PositionState
 
 
 @dataclass(frozen=True)
@@ -109,7 +106,7 @@ class BTCTrendV1Adapter:
         self._candle_index = -1
 
     # -- candle intake ---------------------------------------------------
-    def on_closed_candle(self, candle: StrategyCandle) -> None:
+    def on_closed_candle(self, candle: Candle) -> None:
         """Must be called exactly once per closed candle, in order, before
         check_exit / check_entry for that candle."""
         self._strategy.on_closed_candle(candle)

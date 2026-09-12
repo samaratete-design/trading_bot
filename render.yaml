@@ -1,0 +1,31 @@
+services:
+  - type: worker
+    name: btc-trend-v1-paper
+    runtime: python
+    plan: 0.5c-512mb
+
+    buildCommand: pip install -r requirements.txt
+    startCommand: python3 live/run_live_paper.py
+
+    numInstances: 1
+
+    disk:
+      name: btc-trend-v1-data
+      mountPath: /data
+      sizeGB: 1
+
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+
+      - key: TELEGRAM_CHAT_ID
+        sync: false
+
+      - key: LIVE_DATA_FEED
+        value: yahoo
+
+      - key: LIVE_DB_PATH
+        value: /data/live_btc_trend_v1.sqlite
+
+      - key: POLL_SECONDS
+        value: "60"

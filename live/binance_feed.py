@@ -22,7 +22,7 @@ from typing import List
 
 import requests
 
-from strategies.btc_trend_v1 import Candle
+from core.models import Candle
 
 BINANCE_KLINES_URL = "https://api.binance.com/api/v3/klines"
 SYMBOL = "BTCUSDT"

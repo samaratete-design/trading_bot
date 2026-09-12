@@ -1,1 +1,6 @@
 .env
+__pycache__/
+*.pyc
+live_btc_trend_v1.sqlite
+*.sqlite
+logs/

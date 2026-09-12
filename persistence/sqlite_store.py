@@ -48,7 +48,7 @@ from typing import List, Optional
 
 from execution.paper_broker import DuplicateCandleError, PaperBroker
 from execution.state_machine import RuntimeState
-from strategies.btc_trend_v1 import Candle
+from core.models import Candle
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta (
